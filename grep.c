@@ -123,15 +123,19 @@ void compile(char *regExp)
 			continue;
 
 		case '*':
-			if (lastep==0 || *lastep==CBRA || *lastep==CKET)
-				goto defchar;
+			if (lastep==0 || *lastep==CBRA || *lastep==CKET){
+				*ep++ = CCHR;
+				*ep++ = c;
+			}
 			*lastep |= STAR;
 			continue;
 
 		case '$':
 			peekc = *regExp;
-			if (peekc != eof)
-				goto defchar;
+			if (peekc != eof){
+				*ep++ = CCHR;
+				*ep++ = c;
+			}
 			*ep++ = CCHR;
 			*ep++ = '\n';//CDOL;
 			continue;
@@ -163,7 +167,6 @@ void compile(char *regExp)
 			lastep[1] = cclcnt;
 			continue;
 
-		defchar:
 		default:
 			*ep++ = CCHR;
 			*ep++ = c;
@@ -277,26 +280,30 @@ int advance(char *lp, char *ep)
 
 	case CDOT|STAR:
 		curlp = lp;
-		while (*lp++)
-			;
-		goto star;
+		while (*lp++);
+		do {
+			lp--;
+			if (advance(lp, ep))
+				return(1);
+		} while (lp > curlp);
+		return(0);
 
 	case CCHR|STAR:
 		curlp = lp;
-		while (*lp++ == *ep)
-			;
+		while (*lp++ == *ep);
 		ep++;
-		goto star;
+		do {
+			lp--;
+			if (advance(lp, ep))
+				return(1);
+		} while (lp > curlp);
+		return(0);
 
 	case CCL|STAR:
 	case NCCL|STAR:
 		curlp = lp;
-		while (cclass(ep, *lp++, ep[-1]==(CCL|STAR)))
-			;
+		while (cclass(ep, *lp++, ep[-1]==(CCL|STAR)));
 		ep += *ep;
-		goto star;
-
-	star:
 		do {
 			lp--;
 			if (advance(lp, ep))
